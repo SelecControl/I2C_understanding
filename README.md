@@ -3,7 +3,7 @@
 **Project:** Learning I2C from first principles using an ESP32 + OLED display, then building a working OLED program piece by piece.
 **Format inspired by:** [claude_meter](https://github.com/rohanshinde1234/claude_meter) — this README follows the same "narrative handoff" style so a new chat (e.g., on another PC) can pick up without re-explaining everything.
 **Purpose of this document:** Continuity reference. Claude Code conversation history is **local to the machine + folder path it was created in** (no cloud sync) — this file is the actual continuity mechanism across machines, not the chat transcript.
-**Status (as of 2026-07-16):** All six original learning goals are complete (see section 4). The `oled_test` and `i2c_scanner` sketches are written and explained line-by-line; neither has been compiled/flashed yet (toolchain install deliberately deferred — see section 3).
+**Status (as of 2026-07-16):** All six original learning goals are complete (see section 4). Both `oled_test` and `i2c_scanner` have been compiled, flashed, and verified working on real hardware from the home PC (section 3.1 toolchain) — I2C scanner correctly detected the OLED's port/address, and "Hello ESP32!" displayed properly on screen. Project's core goals are fully done end-to-end.
 
 ---
 
@@ -102,9 +102,14 @@ Office PC has internet, but **no admin rights** (confirmed via a Device Manager 
 - Initially considered raw ESP-IDF I2C driver (no Arduino library) — **superseded**. Final decision: match the reference repo exactly — arduino-cli + Wire.h + Adafruit libraries (see section 3).
 - Confirmed OLED driver chip: **SH1106**, not SSD1306 (see section 2).
 
+### Compiled and flashed — confirmed working on hardware ✅
+
+- [x] **`i2c_scanner.ino`** — compiled with `arduino-cli compile --fqbn esp32:esp32:esp32 i2c_scanner`, uploaded to COM3, correctly detected the OLED on the bus
+- [x] **`oled_test.ino`** — compiled and uploaded the same way; "Hello ESP32!" displayed correctly on the physical OLED
+
 ### Not yet done
 
-- [ ] Actually compiling and flashing `oled_test.ino` and `i2c_scanner.ino` onto real hardware (blocked on toolchain being carried over to this PC — see section 3.2)
+- Nothing outstanding from the original learning goals. See "Optional deeper I2C topics" below if you want to keep going beyond the original scope.
 
 ### Optional deeper I2C topics (not covered — outside the original goals, available on request if ever needed)
 
