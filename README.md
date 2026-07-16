@@ -46,6 +46,39 @@ Matches the reference project's philosophy: **no vendor-specific IDE.**
 - Library stack (planned): `Wire.h` (built-in, I2C communication) + `Adafruit_SH110X` + `Adafruit_GFX` (+ `Adafruit_BusIO` auto-dependency).
 - Toolchain setup/installation itself is **out of scope for the office PC session** — the user handles arduino-cli install/board config on their own machine(s). Don't attempt to install or verify it via shell commands.
 
+### 3.1 Home PC — Confirmed Installed (as of 2026-07-16)
+
+Verified via `arduino-cli core list` / `arduino-cli lib list` on this machine:
+
+| Item | Version |
+|---|---|
+| `arduino-cli` | 1.5.1 (`C:\Users\SAKSHI\arduino-cli\arduino-cli.exe`) |
+| Core `esp32:esp32` | 3.3.10 |
+| Library: Adafruit BusIO | 1.17.4 |
+| Library: Adafruit GFX Library | 1.12.6 |
+| Library: Adafruit SH110X | 2.1.14 |
+| Library: Adafruit SSD1306 | 2.5.17 (extra — not used, harmless) |
+
+### 3.2 Office PC — No Internet/Install Provision There
+
+The office PC can't reach the internet to run `arduino-cli core install` / `arduino-cli lib install` (those download the ESP32 toolchain + libraries from the network). Since everything is already installed here, the fastest path is **carry the already-downloaded folders over on a USB drive** rather than re-downloading anything at the office.
+
+**Two folders to copy (zip them up, bring via USB):**
+
+1. **`C:\Users\SAKSHI\AppData\Local\Arduino15`** — arduino-cli's data directory. Contains `packages\esp32\...`, which is the ESP32 board core **plus the full compiler toolchain** (this is the big one — likely several hundred MB to 1GB+, mostly the xtensa/riscv compiler and `esptool`). This is the piece that's genuinely painful without internet, so it's the most important one to bring.
+2. **`C:\Users\SAKSHI\Documents\Arduino\libraries`** — sketchbook libraries folder. Contains the four Adafruit library folders listed above. Small, copies fast.
+3. **`C:\Users\SAKSHI\arduino-cli\arduino-cli.exe`** — the CLI binary itself. It's a single portable `.exe`, no installer needed.
+
+**At the office PC:**
+
+1. Copy `arduino-cli.exe` anywhere convenient (doesn't need to be on PATH, but easier if it is).
+2. Copy the `Arduino15` folder to the same path as here — `%LOCALAPPDATA%\Arduino15` (i.e. `C:\Users\<office-username>\AppData\Local\Arduino15`) — so arduino-cli finds it at its default location with no config changes needed.
+3. Copy the `libraries` folder to `C:\Users\<office-username>\Documents\Arduino\libraries` (also a default path).
+4. Sanity check, fully offline: `arduino-cli core list` and `arduino-cli lib list` should print the same tables as above. If they do, compiling/flashing (`arduino-cli compile` / `arduino-cli upload`) should work without touching the network.
+   - *(If the office username differs and you'd rather not match the exact path, `arduino-cli config init` generates an `arduino-cli.yaml` where `directories.data` and `directories.user` can be pointed at wherever you actually placed the copied folders instead.)*
+
+No shell commands were run to install/verify anything beyond read-only `core list` / `lib list` checks on this (home) machine — matches the existing rule of not touching toolchain state during a teaching session.
+
 ## 4. Progress Log
 
 ### Concepts covered ✅
@@ -55,6 +88,8 @@ Matches the reference project's philosophy: **no vendor-specific IDE.**
 - [x] **Pull-up resistors** — open-drain wires (devices can only pull LOW or release), resistor pulls the line HIGH by default; OLED breakout likely has these built in
 - [x] **Device addresses** — 7-bit address (e.g., OLED = `0x3C`) so multiple devices can share the same 2 wires; hex notation (`0x..`) intro; `#define` intro
 - [x] **What the `Wire` library does** — abstracts away manual clock/data bit-banging; `#include <Wire.h>`, `setup()` as one-time init function, `Wire.begin()` defaults to GPIO21/22 on ESP32
+- [x] **`Wire.beginTransmission()` / `Wire.endTransmission()`** — starting/ending an I2C conversation with a specific address; ACK vs NACK on the SDA line (9th clock pulse); `endTransmission()` returns 0 (ACK/success) or non-zero (NACK/no response), sends the STOP condition, and releases the bus — no auto-retry
+- [x] **I2C scanner sketch (concept)** — loop `beginTransmission()`/`endTransmission()` over addresses 1–126, check for return `0` (ACK); skips `0x00` (reserved General Call / broadcast address); doubles as hardware/wiring verification tool
 
 ### Decisions made along the way
 
@@ -63,8 +98,6 @@ Matches the reference project's philosophy: **no vendor-specific IDE.**
 
 ### Not yet covered (next steps, in order)
 
-- [ ] `Wire.beginTransmission()` / `Wire.endTransmission()` — starting and ending an I2C "conversation" with a specific address
-- [ ] Building an **I2C scanner** sketch (loops through addresses 1–127, reports which ones respond) — one of the user's explicit learning goals, doubles as a debugging tool
 - [ ] Introducing the Adafruit display libraries (`Adafruit_GFX` + `Adafruit_SH110X`) and what each provides
 - [ ] Writing the OLED init sequence (`display.begin()`, clearing the buffer, etc.) piece by piece
 - [ ] Drawing text/shapes to the OLED buffer and pushing it with `display.display()`
@@ -77,3 +110,4 @@ Matches the reference project's philosophy: **no vendor-specific IDE.**
 2. Start a new Claude Code session in that folder.
 3. Point Claude at this README and say something like: *"Continue teaching me I2C from where README.md's progress log leaves off, following the same teaching rules in section 1."*
 4. No need to re-explain hardware, wiring, toolchain decisions, or concepts already covered — they're all captured above.
+5. **If resuming on a machine with no internet access (e.g. office PC):** see section 3.2 first — arduino-cli/ESP32 core/libraries need to be carried over manually via USB rather than installed fresh.
