@@ -72,25 +72,13 @@ Verified via `arduino-cli core list` / `arduino-cli lib list` on this machine:
 | Library: Adafruit SH110X | 2.1.14 |
 | Library: Adafruit SSD1306 | 2.5.17 (extra — not used, harmless) |
 
-### 3.2 Office PC — No Internet/Install Provision There
+### 3.2 Office PC — Learning/Writing Only, No Toolchain Install (decided 2026-07-16)
 
-The office PC can't reach the internet to run `arduino-cli core install` / `arduino-cli lib install` (those download the ESP32 toolchain + libraries from the network). Since everything is already installed here, the fastest path is **carry the already-downloaded folders over on a USB drive** rather than re-downloading anything at the office.
+Office PC has internet, but **no admin rights** (confirmed via a Device Manager dialog restricting device changes to administrators). `pnputil /enum-drivers` (runnable without admin) confirmed no CP210x/Silicon Labs USB-to-UART driver is staged on this machine — so flashing here would likely hit a driver wall needing admin rights this account doesn't have.
 
-**Two folders to copy (zip them up, bring via USB):**
-
-1. **`C:\Users\SAKSHI\AppData\Local\Arduino15`** — arduino-cli's data directory. Contains `packages\esp32\...`, which is the ESP32 board core **plus the full compiler toolchain** (this is the big one — likely several hundred MB to 1GB+, mostly the xtensa/riscv compiler and `esptool`). This is the piece that's genuinely painful without internet, so it's the most important one to bring.
-2. **`C:\Users\SAKSHI\Documents\Arduino\libraries`** — sketchbook libraries folder. Contains the four Adafruit library folders listed above. Small, copies fast.
-3. **`C:\Users\SAKSHI\arduino-cli\arduino-cli.exe`** — the CLI binary itself. It's a single portable `.exe`, no installer needed.
-
-**At the office PC:**
-
-1. Copy `arduino-cli.exe` anywhere convenient (doesn't need to be on PATH, but easier if it is).
-2. Copy the `Arduino15` folder to the same path as here — `%LOCALAPPDATA%\Arduino15` (i.e. `C:\Users\<office-username>\AppData\Local\Arduino15`) — so arduino-cli finds it at its default location with no config changes needed.
-3. Copy the `libraries` folder to `C:\Users\<office-username>\Documents\Arduino\libraries` (also a default path).
-4. Sanity check, fully offline: `arduino-cli core list` and `arduino-cli lib list` should print the same tables as above. If they do, compiling/flashing (`arduino-cli compile` / `arduino-cli upload`) should work without touching the network.
-   - *(If the office username differs and you'd rather not match the exact path, `arduino-cli config init` generates an `arduino-cli.yaml` where `directories.data` and `directories.user` can be pointed at wherever you actually placed the copied folders instead.)*
-
-No shell commands were run to install/verify anything beyond read-only `core list` / `lib list` checks on this (home) machine — matches the existing rule of not touching toolchain state during a teaching session.
+**Decision:** Don't install `arduino-cli`/core/libraries on the office PC at all — not worth the time/effort given flashing has to happen elsewhere regardless. Split cleanly instead:
+- **Office PC**: learning concepts, reading/writing/understanding code only (this is what `oled_test.ino` and `i2c_scanner.ino` are for).
+- **Home PC**: all actual compiling and flashing, using the toolchain already confirmed working there (section 3.1).
 
 ## 4. Progress Log
 
@@ -133,4 +121,4 @@ No shell commands were run to install/verify anything beyond read-only `core lis
 2. Start a new Claude Code session in that folder.
 3. Point Claude at this README and say something like: *"Continue teaching me I2C from where README.md's progress log leaves off, following the same teaching rules in section 1."*
 4. No need to re-explain hardware, wiring, toolchain decisions, or concepts already covered — they're all captured above.
-5. **If resuming on a machine with no internet access (e.g. office PC):** see section 3.2 first — arduino-cli/ESP32 core/libraries need to be carried over manually via USB rather than installed fresh.
+5. **Toolchain installation is deferred everywhere until core understanding is done** — see section 3 for what's already confirmed working on the home PC. Both the home and office PCs have internet, so a fresh install is fine wherever/whenever it happens — no USB transfer needed.
