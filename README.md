@@ -3,6 +3,7 @@
 **Project:** Learning I2C from first principles using an ESP32 + OLED display, then building a working OLED program piece by piece.
 **Format inspired by:** [claude_meter](https://github.com/rohanshinde1234/claude_meter) — this README follows the same "narrative handoff" style so a new chat (e.g., on another PC) can pick up without re-explaining everything.
 **Purpose of this document:** Continuity reference. Claude Code conversation history is **local to the machine + folder path it was created in** (no cloud sync) — this file is the actual continuity mechanism across machines, not the chat transcript.
+**Status (as of 2026-07-16):** All six original learning goals are complete (see section 4). The `oled_test` and `i2c_scanner` sketches are written and explained line-by-line; neither has been compiled/flashed yet (toolchain install deliberately deferred — see section 3).
 
 ---
 
@@ -37,6 +38,18 @@ This is a **guided learning session**, not just a build log. If you're a fresh C
 | GND | Button leg 2 | Ground |
 
 These are also the ESP32's **default** `Wire` library pins (SDA=21, SCL=22), so no custom pin arguments are needed in `Wire.begin()`.
+
+### 2.2 Project folder structure (current)
+
+```
+I2C_understanding/
+  README.md                 <- this file
+  Images/                   <- ESP32.png, Oled.png, PIN_connections.png
+  oled_test/
+    oled_test.ino            <- complete "Hello ESP32!" program, written and explained; not yet compiled/flashed
+  i2c_scanner/
+    i2c_scanner.ino          <- standalone I2C address-scanning/debugging sketch; not yet compiled/flashed
+```
 
 ## 3. Toolchain (Decided)
 
@@ -81,28 +94,38 @@ No shell commands were run to install/verify anything beyond read-only `core lis
 
 ## 4. Progress Log
 
-### Concepts covered ✅
+### All six original learning goals: complete ✅
 
 - [x] **What I2C is and why it's used** — 2-wire shared bus vs. dedicated wires per device; controller (ESP32) vs. peripheral (OLED) terminology
 - [x] **SDA and SCL** — SCL as clock/timing ("drumbeat"), SDA as the actual data line, data read on clock edge
 - [x] **Pull-up resistors** — open-drain wires (devices can only pull LOW or release), resistor pulls the line HIGH by default; OLED breakout likely has these built in
-- [x] **Device addresses** — 7-bit address (e.g., OLED = `0x3C`) so multiple devices can share the same 2 wires; hex notation (`0x..`) intro; `#define` intro
+- [x] **Device addresses** — 7-bit address (e.g., OLED = `0x3C`) so multiple devices can share the same 2 wires; hex notation (`0x..`) intro; `#define` intro; address is fixed by the manufacturer in the chip (not set via jumper, beyond an optional 1-2 bit tweak on some boards)
 - [x] **What the `Wire` library does** — abstracts away manual clock/data bit-banging; `#include <Wire.h>`, `setup()` as one-time init function, `Wire.begin()` defaults to GPIO21/22 on ESP32
-- [x] **`Wire.beginTransmission()` / `Wire.endTransmission()`** — starting/ending an I2C conversation with a specific address; ACK vs NACK on the SDA line (9th clock pulse); `endTransmission()` returns 0 (ACK/success) or non-zero (NACK/no response), sends the STOP condition, and releases the bus — no auto-retry
-- [x] **I2C scanner sketch (concept)** — loop `beginTransmission()`/`endTransmission()` over addresses 1–126, check for return `0` (ACK); skips `0x00` (reserved General Call / broadcast address); doubles as hardware/wiring verification tool
+- [x] **`Wire.beginTransmission()` / `Wire.endTransmission()`** — starting/ending an I2C conversation with a specific address; ACK vs NACK on the SDA line (9th clock pulse); `endTransmission()` returns a status code — 0 (ACK/success) or non-zero (NACK/failure) — sends the STOP condition, and releases the bus, no auto-retry
+- [x] **`Adafruit_GFX` + `Adafruit_SH110X`** — split responsibility: `GFX` draws into an in-memory buffer (hardware-agnostic "artist"), `SH110X` delivers that buffer over I2C via `Wire` to the specific SH1106 chip (the "courier"); class vs. object; constructor args in `Adafruit_SH1106G display(128, 64, &Wire, -1)` (width, height, I2C bus, no hardware reset pin → software reset instead)
+- [x] **`display.begin(0x3C, true)`** — one-time chip init (internal voltages, memory, reset); returns `true`/`false` based on whether the device ACKed at that address — same ACK/NACK mechanism as `endTransmission()`, just interpreted internally
+- [x] **Buffer + `display.display()`** — all `Adafruit_GFX` drawing calls (`clearDisplay`, `setTextSize`, `setTextColor`, `setCursor`, `println`) only edit the invisible in-memory buffer; nothing appears on the physical screen until `display.display()` pushes the whole frame at once (avoids visible partial/flickering draws)
+- [x] **Complete working program assembled** — `setup()`/`loop()` explained; full "Hello ESP32!" sketch traced line-by-line end to end, including why `while(true);` must sit *inside* the `if (!display.begin(...))` block (placing it outside would freeze the program every run, even on success) — written to `oled_test/oled_test.ino`
+- [x] **I2C scanner, fully written and explained** — loops `beginTransmission()`/`endTransmission()` over addresses 1–126, checks for return `0` (ACK); introduces `Serial` (USB debug output, separate from I2C), `for` loops, and `delay()`; written to `i2c_scanner/i2c_scanner.ino`
+- [x] **Debugging with the scanner** — reasoned through real failure scenarios: no devices found (wiring/pull-ups/power), device at unexpected address (update code), swapped SDA/SCL (breaks ACK entirely since clock and data roles are no longer distinguishable)
 
 ### Decisions made along the way
 
 - Initially considered raw ESP-IDF I2C driver (no Arduino library) — **superseded**. Final decision: match the reference repo exactly — arduino-cli + Wire.h + Adafruit libraries (see section 3).
 - Confirmed OLED driver chip: **SH1106**, not SSD1306 (see section 2).
 
-### Not yet covered (next steps, in order)
+### Not yet done
 
-- [ ] Introducing the Adafruit display libraries (`Adafruit_GFX` + `Adafruit_SH110X`) and what each provides
-- [ ] Writing the OLED init sequence (`display.begin()`, clearing the buffer, etc.) piece by piece
-- [ ] Drawing text/shapes to the OLED buffer and pushing it with `display.display()`
-- [ ] Assembling the complete working program from the pieces learned
-- [ ] Debugging common I2C issues (no device found, wrong address, garbled display) using the scanner
+- [ ] Actually compiling and flashing `oled_test.ino` and `i2c_scanner.ino` onto real hardware (blocked on toolchain being carried over to this PC — see section 3.2)
+
+### Optional deeper I2C topics (not covered — outside the original goals, available on request if ever needed)
+
+- Clock stretching (peripheral pausing SCL when it needs more time)
+- Read operations (we only ever wrote to the OLED; reading involves the address's R/W bit and NACK/ACK during reads)
+- Repeated START / combined write-then-read transactions
+- Multi-master arbitration (only relevant with more than one controller on the bus)
+- 10-bit addressing (beyond the 7-bit addressing used here)
+- Speed modes (Standard 100kHz used by default here, vs. Fast/Fast Mode+/High Speed)
 
 ## 5. How to Resume This Session Elsewhere
 
